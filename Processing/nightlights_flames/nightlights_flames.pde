@@ -13,7 +13,7 @@ void setup()
   opcu = new OPC(this, "unicorn.local", 7890);
   opcs = new OPC(this, "strawberry.local", 7890);
   opct = new OPC(this, "toast.local", 7890);
-//  opca = new OPC(this, "apple.local", 7890);
+  opca = new OPC(this, "apple.local", 7890);
 
 
   if (opcc != null){
@@ -47,9 +47,9 @@ void setup()
   if (opca != null){
     println("Initializing Apple");
     opca.ledStrip(0, 16, width/2, height/2+5, width / 70.0, 0, false);
-    opca.ledStrip(1000, 16, width/2, height/2-10, width / 70.0, 0, false);
-    opca.ledStrip(2000, 16, width/2, height/2-40, width / 70.0, 0, false);
-    opca.ledStrip(3000, 48, width/2, height/2+50, width / 70.0, 0, false);    
+    opca.ledStrip(1000, 16, width/2, height/2-50, width / 70.0, 0, false);
+    opca.ledStrip(2000, 48, width/2, height/2-40, width / 70.0, 0, false);
+    opca.ledStrip(3000, 16, width/2, height/2+50, width / 70.0, 0, false);    
   }
 }
 
