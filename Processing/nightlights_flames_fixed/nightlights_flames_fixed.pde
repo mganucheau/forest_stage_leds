@@ -66,17 +66,16 @@ void setup()
 
 void draw()
 {
-//  // Scale the image so that it matches the width of the window
-//  int imHeight = im.height * width / im.width;
-//
-//  // Scroll down slowly, and wrap around
-//  float speed = 0.05;
-//  float y = (millis() * -speed) % imHeight;
-//  
-//  // Use two copies of the image, so it seems to repeat infinitely  
-//  image(im, 0, y, width, imHeight);
-//  image(im, 0, y + imHeight, width, imHeight);
-float hue = (millis() * 0.01) % 100;
-background(hue, 100, 100);
+  // Scale the image so that it matches the width of the window
+  int imHeight = im.height * width / im.width;
+
+  // Scroll down slowly, and wrap around
+  float speed = 0.05;
+  float y = (millis() * -speed) % imHeight;
+  
+  // Use two copies of the image, so it seems to repeat infinitely  
+  image(im, 0, y, width, imHeight);
+  image(im, 0, y + imHeight, width, imHeight);
+
 }
 

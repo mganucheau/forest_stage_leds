@@ -1,3 +1,91 @@
+import processing.core.*; 
+import processing.data.*; 
+import processing.event.*; 
+import processing.opengl.*; 
+
+import java.net.*; 
+import java.util.Arrays; 
+
+import java.util.HashMap; 
+import java.util.ArrayList; 
+import java.io.File; 
+import java.io.BufferedReader; 
+import java.io.PrintWriter; 
+import java.io.InputStream; 
+import java.io.OutputStream; 
+import java.io.IOException; 
+
+public class nightlights_flames extends PApplet {
+
+OPC opcc,opcu,opcs,opct,opca;
+PImage im;
+
+public void setup()
+{
+  size(800, 200);
+
+  // Load a sample image
+  im = loadImage("flames.jpeg");
+
+  // Connect to the local instance of fcserver
+  opcc = new OPC(this, "cloud.local", 7890);
+  opcu = new OPC(this, "unicorn.local", 7890);
+  opcs = new OPC(this, "strawberry.local", 7890);
+  opct = new OPC(this, "toast.local", 7890);
+  opca = new OPC(this, "apple.local", 7890);
+
+
+  if (opcc != null){
+    println("Initializing Cloud");
+    opcc.ledStrip(0, 16, width/2, height/2, width / 70.0f, 0, false);
+    opcc.ledStrip(1000, 16, width/2, height/2-15, width / 70.0f, 0, false);
+    opcc.ledStrip(2000, 16, width/2, height/2-30, width / 70.0f, 0, false);
+    opcc.ledStrip(3000, 48, width/2, height/2+15, width / 70.0f, 0, false);
+    opcc.ledStrip(4000, 32, width/2, height/2+30, width / 70.0f, 0, false);
+    opcc.ledStrip(5000, 32, width/2, height/2+45, width / 70.0f, 0, false);
+  }
+ 
+  if (opcu != null){
+    println("Initializing Unicorn");
+    opcu.ledStrip(0, 32, width/2, height/2-10, width / 70.0f, 0, false);
+    opcu.ledStrip(1000, 64, width/2, height/2-25, width / 70.0f, 0, false);
+    opcu.ledStrip(2000, 32, width/2, height/2-35, width / 70.0f, 0, false);
+  }
+  
+  if (opcs != null){
+    println("Initializing Strawberry");
+    opcs.ledStrip(0, 24, width/2, height/2-45, width / 70.0f, 0, false);
+    opcs.ledStrip(1000, 16, width/2, height/2+20, width / 70.0f, 0, false);
+  }
+  
+  if (opct != null){
+    println("Initializing Toast");
+    opct.ledStrip(0, 32, width/2+10, height/2-5, width / 70.0f, 0, false);
+  }
+  
+  if (opca != null){
+    println("Initializing Apple");
+    opca.ledStrip(0, 16, width/2, height/2+5, width / 70.0f, 0, false);
+    opca.ledStrip(1000, 16, width/2, height/2-50, width / 70.0f, 0, false);
+    opca.ledStrip(2000, 48, width/2, height/2-40, width / 70.0f, 0, false);
+    opca.ledStrip(3000, 16, width/2, height/2+50, width / 70.0f, 0, false);    
+  }
+}
+
+public void draw()
+{
+  // Scale the image so that it matches the width of the window
+  int imHeight = im.height * width / im.width;
+
+  // Scroll down slowly, and wrap around
+  float speed = 0.05f;
+  float y = (millis() * -speed) % imHeight;
+  
+  // Use two copies of the image, so it seems to repeat infinitely  
+  image(im, 0, y, width, imHeight);
+  image(im, 0, y + imHeight, width, imHeight);
+}
+
 /*
  * Simple Open Pixel Control client for Processing,
  * designed to sample each LED's color from some point on the canvas.
@@ -6,67 +94,13 @@
  * This file is released into the public domain.
  */
 
-import java.net.*;
-import java.util.Arrays;
 
-public class Connector implements Runnable {
-   public Socket socket;
-   public OutputStream output;
-   
-   Thread t;
-   String host;
-   int port;
- 
-   public Connector(String host, int port) {
-       this.host = host;
-       this.port = port;
-   }
- 
-   public boolean isConnected() {
-       return (this.output != null);
-   }
-   
-   public void startConnect() {       
-       this.t = new Thread(this);
-       this.t.start();
-       println("Starting connection to OPC server " + this.host);
-   }
-   
-   public void dispose() {
-       this.socket = null;
-       this.output = null;
-   }
-   
-   public void run() {
-       while (true) {
-           if (this.output == null) {
-                try {
-                  this.socket = new Socket(host, port);
-                  this.socket.setTcpNoDelay(true);
-                  this.socket.setSoTimeout(1000);
-                  this.output = socket.getOutputStream();
-                  println("Connected to OPC server " + this.host);
-                } catch (ConnectException e) {
-                  dispose();
-                } catch (IOException e) {
-                  dispose();
-                }
-           }
-           try {
-             Thread.sleep(2000);
-           } catch (InterruptedException e) {
-           }
-       }
-   }
-}
+
 
 public class OPC
 {
-  //Socket socket;
-  //OutputStream output;
-  
-  Connector connector;
-  
+  Socket socket;
+  OutputStream output;
   String host;
   int port;
 
@@ -75,25 +109,17 @@ public class OPC
   byte firmwareConfig;
   String colorCorrection;
   boolean enableShowLocations;
-  
-  boolean wasConnected;
 
   OPC(PApplet parent, String host, int port)
   {
     this.host = host;
     this.port = port;
-    this.connector = new Connector(host, port);
     this.enableShowLocations = true;
-    this.wasConnected = false;
     parent.registerDraw(this);
   }
 
-  public void startConnect() {
-     this.connector.startConnect(); 
-  }
-
   // Set the location of a single LED
-  void led(int index, int x, int y)  
+  public void led(int index, int x, int y)  
   {
     // For convenience, automatically grow the pixelLocations array. We do want this to be an array,
     // instead of a HashMap, to keep draw() as fast as it can be.
@@ -109,48 +135,48 @@ public class OPC
   // Set the location of several LEDs arranged in a strip.
   // Angle is in radians, measured clockwise from +X.
   // (x,y) is the center of the strip.
-  void ledStrip(int index, int count, float x, float y, float spacing, float angle, boolean reversed)
+  public void ledStrip(int index, int count, float x, float y, float spacing, float angle, boolean reversed)
   {
     float s = sin(angle);
     float c = cos(angle);
     for (int i = 0; i < count; i++) {
       led(reversed ? (index + count - 1 - i) : (index + i),
-        (int)(x + (i - (count-1)/2.0) * spacing * c + 0.5),
-        (int)(y + (i - (count-1)/2.0) * spacing * s + 0.5));
+        (int)(x + (i - (count-1)/2.0f) * spacing * c + 0.5f),
+        (int)(y + (i - (count-1)/2.0f) * spacing * s + 0.5f));
     }
   }
 
   // Set the locations of a ring of LEDs. The center of the ring is at (x, y),
   // with "radius" pixels between the center and each LED. The first LED is at
   // the indicated angle, in radians, measured clockwise from +X.
-  void ledRing(int index, int count, float x, float y, float radius, float angle)
+  public void ledRing(int index, int count, float x, float y, float radius, float angle)
   {
     for (int i = 0; i < count; i++) {
       float a = angle + i * 2 * PI / count;
-      led(index + i, (int)(x - radius * cos(a) + 0.5),
-        (int)(y - radius * sin(a) + 0.5));
+      led(index + i, (int)(x - radius * cos(a) + 0.5f),
+        (int)(y - radius * sin(a) + 0.5f));
     }
   }
 
   // Set the location of several LEDs arranged in a grid. The first strip is
   // at 'angle', measured in radians clockwise from +X.
   // (x,y) is the center of the grid.
-  void ledGrid(int index, int stripLength, int numStrips, float x, float y,
+  public void ledGrid(int index, int stripLength, int numStrips, float x, float y,
                float ledSpacing, float stripSpacing, float angle, boolean zigzag)
   {
     float s = sin(angle + HALF_PI);
     float c = cos(angle + HALF_PI);
     for (int i = 0; i < numStrips; i++) {
       ledStrip(index + stripLength * i, stripLength,
-        x + (i - (numStrips-1)/2.0) * stripSpacing * c,
-        y + (i - (numStrips-1)/2.0) * stripSpacing * s, ledSpacing,
+        x + (i - (numStrips-1)/2.0f) * stripSpacing * c,
+        y + (i - (numStrips-1)/2.0f) * stripSpacing * s, ledSpacing,
         angle, zigzag && (i % 2) == 1);
     }
   }
 
   // Set the location of 64 LEDs arranged in a uniform 8x8 grid.
   // (x,y) is the center of the grid.
-  void ledGrid8x8(int index, float x, float y, float spacing, float angle, boolean zigzag)
+  public void ledGrid8x8(int index, float x, float y, float spacing, float angle, boolean zigzag)
   {
     ledGrid(index, 8, 8, x, y, spacing, spacing, angle, zigzag);
   }
@@ -159,7 +185,7 @@ public class OPC
   // Showing locations is enabled by default. You might need to disable it if our drawing
   // is interfering with your processing sketch, or if you'd simply like the screen to be
   // less cluttered.
-  void showLocations(boolean enabled)
+  public void showLocations(boolean enabled)
   {
     enableShowLocations = enabled;
   }
@@ -167,7 +193,7 @@ public class OPC
   // Enable or disable dithering. Dithering avoids the "stair-stepping" artifact and increases color
   // resolution by quickly jittering between adjacent 8-bit brightness levels about 400 times a second.
   // Dithering is on by default.
-  void setDithering(boolean enabled)
+  public void setDithering(boolean enabled)
   {
     if (enabled)
       firmwareConfig &= ~0x01;
@@ -179,7 +205,7 @@ public class OPC
   // Enable or disable frame interpolation. Interpolation automatically blends between consecutive frames
   // in hardware, and it does so with 16-bit per channel resolution. Combined with dithering, this helps make
   // fades very smooth. Interpolation is on by default.
-  void setInterpolation(boolean enabled)
+  public void setInterpolation(boolean enabled)
   {
     if (enabled)
       firmwareConfig &= ~0x02;
@@ -190,14 +216,14 @@ public class OPC
 
   // Put the Fadecandy onboard LED under automatic control. It blinks any time the firmware processes a packet.
   // This is the default configuration for the LED.
-  void statusLedAuto()
+  public void statusLedAuto()
   {
     firmwareConfig &= 0x0C;
     sendFirmwareConfigPacket();
   }    
 
   // Manually turn the Fadecandy onboard LED on or off. This disables automatic LED control.
-  void setStatusLed(boolean on)
+  public void setStatusLed(boolean on)
   {
     firmwareConfig |= 0x04;   // Manual LED control
     if (on)
@@ -208,23 +234,24 @@ public class OPC
   } 
 
   // Set the color correction parameters
-  void setColorCorrection(float gamma, float red, float green, float blue)
+  public void setColorCorrection(float gamma, float red, float green, float blue)
   {
     colorCorrection = "{ \"gamma\": " + gamma + ", \"whitepoint\": [" + red + "," + green + "," + blue + "]}";
     sendColorCorrectionPacket();
   }
   
   // Set custom color correction parameters from a string
-  void setColorCorrection(String s)
+  public void setColorCorrection(String s)
   {
     colorCorrection = s;
     sendColorCorrectionPacket();
   }
 
   // Send a packet with the current firmware configuration settings
-  void sendFirmwareConfigPacket()
+  public void sendFirmwareConfigPacket()
   {
-    if (!connector.isConnected()) {
+    if (output == null) {
+      // We'll do this when we reconnect
       return;
     }
  
@@ -240,20 +267,21 @@ public class OPC
     packet[8] = firmwareConfig;
 
     try {
-      connector.output.write(packet);
+      output.write(packet);
     } catch (Exception e) {
       dispose();
     }
   }
 
   // Send a packet with the current color correction settings
-  void sendColorCorrectionPacket()
+  public void sendColorCorrectionPacket()
   {
     if (colorCorrection == null) {
       // No color correction defined
       return;
     }
-    if (!connector.isConnected()) {
+    if (output == null) {
+      // We'll do this when we reconnect
       return;
     }
 
@@ -270,8 +298,8 @@ public class OPC
     header[7] = 0x01;       // Command ID low byte
 
     try {
-      connector.output.write(header);
-      connector.output.write(content);
+      output.write(header);
+      output.write(content);
     } catch (Exception e) {
       dispose();
     }
@@ -282,24 +310,21 @@ public class OPC
   // If you aren't using that mapping, this function has no effect.
   // In that case, you can call setPixelCount(), setPixel(), and writePixels()
   // separately.
-  void draw()
+  public void draw()
   {
     if (pixelLocations == null) {
       // No pixels defined yet
       return;
     }
  
-    if (!connector.isConnected()) {
+    if (output == null) {
+      // Try to (re)connect
+      connect();
+    }
+    if (output == null) {
       return;
     }
-    
-    // handle first draw after connect
-    if (!this.wasConnected) {
-        sendColorCorrectionPacket();
-        sendFirmwareConfigPacket();
-        this.wasConnected = true;
-    }
- 
+
     int numPixels = pixelLocations.length;
     int ledAddress = 4;
 
@@ -330,7 +355,7 @@ public class OPC
   // Change the number of pixels in our output packet.
   // This is normally not needed; the output packet is automatically sized
   // by draw() and by setPixel().
-  void setPixelCount(int numPixels)
+  public void setPixelCount(int numPixels)
   {
     int numBytes = 3 * numPixels;
     int packetLen = 4 + numBytes;
@@ -346,7 +371,7 @@ public class OPC
   
   // Directly manipulate a pixel in the output buffer. This isn't needed
   // for pixels that are mapped to the screen.
-  void setPixel(int number, color c)
+  public void setPixel(int number, int c)
   {
     int offset = 4 + number * 3;
     if (packetData == null || packetData.length < offset + 3) {
@@ -360,7 +385,7 @@ public class OPC
   
   // Read a pixel from the output buffer. If the pixel was mapped to the display,
   // this returns the value we captured on the previous frame.
-  color getPixel(int number)
+  public int getPixel(int number)
   {
     int offset = 4 + number * 3;
     if (packetData == null || packetData.length < offset + 3) {
@@ -372,30 +397,62 @@ public class OPC
   // Transmit our current buffer of pixel values to the OPC server. This is handled
   // automatically in draw() if any pixels are mapped to the screen, but if you haven't
   // mapped any pixels to the screen you'll want to call this directly.
-  void writePixels()
+  public void writePixels()
   {
     if (packetData == null || packetData.length == 0) {
       // No pixel buffer
       return;
     }
-    
-    if (!connector.isConnected()) {
-        return;
+    if (output == null) {
+      // Try to (re)connect
+      connect();
     }
-    
+    if (output == null) {
+      return;
+    }
+
     try {
-      connector.output.write(packetData);
+      output.write(packetData);
     } catch (Exception e) {
       dispose();
     }
   }
 
-  void dispose()
+  public void dispose()
   {
-      println("Disconnected from " + this.host + ". Retrying...");
-      connector.dispose();
-      this.wasConnected = false; 
+    // Destroy the socket. Called internally when we've disconnected.
+    if (output != null) {
+      println("Disconnected from OPC server");
+    }
+    socket = null;
+    output = null;
   }
 
+  public void connect()
+  {
+    // Try to connect to the OPC server. This normally happens automatically in draw()
+    try {
+      socket = new Socket(host, port);
+      socket.setTcpNoDelay(true);
+      output = socket.getOutputStream();
+      println("Connected to OPC server");
+    } catch (ConnectException e) {
+      dispose();
+    } catch (IOException e) {
+      dispose();
+    }
+    
+    sendColorCorrectionPacket();
+    sendFirmwareConfigPacket();
+  }
 }
 
+  static public void main(String[] passedArgs) {
+    String[] appletArgs = new String[] { "nightlights_flames" };
+    if (passedArgs != null) {
+      PApplet.main(concat(appletArgs, passedArgs));
+    } else {
+      PApplet.main(appletArgs);
+    }
+  }
+}
