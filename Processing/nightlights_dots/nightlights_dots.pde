@@ -16,14 +16,14 @@ float dot1_angle = 0;
 
 //left
 float dot2_rpm = -16;
-float dot2_size = 0.17;
+float dot2_size = 0.57;
 float dot2_brightness = 90;
 float dot2_hue = 13;
 float dot2_angle = 0;
 
 //top
 float dot3_rpm = -16;
-float dot3_size = .16;
+float dot3_size = .56;
 float dot3_brightness = 90;
 float dot3_hue = 13;
 float dot3_angle = 180;
@@ -38,42 +38,42 @@ float dot4_angle = 0;
 
 //back
 float dot5_rpm = -16;
-float dot5_size = 0.16;
+float dot5_size = 0.56;
 float dot5_brightness = 90;
 float dot5_hue = 13;
 float dot5_angle = 0;
 
 //right
 float dot6_rpm = -16;
-float dot6_size = 0.16;
+float dot6_size = 0.56;
 float dot6_brightness = 90;
 float dot6_hue = 13;
 float dot6_angle = 0;
 
 //bottom center
 float dot7_rpm = -26;
-float dot7_size = 0.19;
+float dot7_size = 0.59;
 float dot7_brightness = 90;
 float dot7_hue = 80;
 float dot7_angle = 60;
 
 //left
 float dot8_rpm = 26;
-float dot8_size = 0.19;
+float dot8_size = 0.59;
 float dot8_brightness = 90;
 float dot8_hue = 80;
 float dot8_angle = 50;
 
 //top
 float dot9_rpm = 26;
-float dot9_size = .19;
+float dot9_size = .59;
 float dot9_brightness = 90;
 float dot9_hue = 80;
 float dot9_angle = 30;
 
 //front
 float dot10_rpm = 26;
-float dot10_size = .19;
+float dot10_size = .59;
 float dot10_brightness = 90;
 float dot10_hue = 80;
 float dot10_angle = 20;
@@ -81,14 +81,14 @@ float dot10_angle = 20;
 
 //back
 float dot11_rpm = 26;
-float dot11_size = 0.19;
+float dot11_size = 0.59;
 float dot11_brightness = 90;
 float dot11_hue = 80;
 float dot11_angle = 10;
 
 //right
 float dot12_rpm = 26;
-float dot12_size = 0.19;
+float dot12_size = 0.59;
 float dot12_brightness = 90;
 float dot12_hue = 80;
 float dot12_angle = 15;
@@ -379,4 +379,3 @@ void draw()
   
 
 }
-

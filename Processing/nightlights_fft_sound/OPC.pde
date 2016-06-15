@@ -85,7 +85,7 @@ public class OPC
     this.connector = new Connector(host, port);
     this.enableShowLocations = true;
     this.wasConnected = false;
-    parent.registerDraw(this);
+    parent.registerMethod("draw", this);
   }
 
   public void startConnect() {
@@ -398,4 +398,3 @@ public class OPC
   }
 
 }
-

@@ -9,10 +9,64 @@
 import java.net.*;
 import java.util.Arrays;
 
+public class Connector implements Runnable {
+   public Socket socket;
+   public OutputStream output;
+   
+   Thread t;
+   String host;
+   int port;
+ 
+   public Connector(String host, int port) {
+       this.host = host;
+       this.port = port;
+   }
+ 
+   public boolean isConnected() {
+       return (this.output != null);
+   }
+   
+   public void startConnect() {       
+       this.t = new Thread(this);
+       this.t.start();
+       println("Starting connection to OPC server " + this.host);
+   }
+   
+   public void dispose() {
+       this.socket = null;
+       this.output = null;
+   }
+   
+   public void run() {
+       while (true) {
+           if (this.output == null) {
+                try {
+                  this.socket = new Socket(host, port);
+                  this.socket.setTcpNoDelay(true);
+                  this.socket.setSoTimeout(1000);
+                  this.output = socket.getOutputStream();
+                  println("Connected to OPC server " + this.host);
+                } catch (ConnectException e) {
+                  dispose();
+                } catch (IOException e) {
+                  dispose();
+                }
+           }
+           try {
+             Thread.sleep(2000);
+           } catch (InterruptedException e) {
+           }
+       }
+   }
+}
+
 public class OPC
 {
-  Socket socket;
-  OutputStream output;
+  //Socket socket;
+  //OutputStream output;
+  
+  Connector connector;
+  
   String host;
   int port;
 
@@ -21,13 +75,21 @@ public class OPC
   byte firmwareConfig;
   String colorCorrection;
   boolean enableShowLocations;
+  
+  boolean wasConnected;
 
   OPC(PApplet parent, String host, int port)
   {
     this.host = host;
     this.port = port;
+    this.connector = new Connector(host, port);
     this.enableShowLocations = true;
-    parent.registerDraw(this);
+    this.wasConnected = false;
+    parent.registerMethod("draw", this);
+  }
+
+  public void startConnect() {
+     this.connector.startConnect(); 
   }
 
   // Set the location of a single LED
@@ -162,8 +224,7 @@ public class OPC
   // Send a packet with the current firmware configuration settings
   void sendFirmwareConfigPacket()
   {
-    if (output == null) {
-      // We'll do this when we reconnect
+    if (!connector.isConnected()) {
       return;
     }
  
@@ -179,7 +240,7 @@ public class OPC
     packet[8] = firmwareConfig;
 
     try {
-      output.write(packet);
+      connector.output.write(packet);
     } catch (Exception e) {
       dispose();
     }
@@ -192,8 +253,7 @@ public class OPC
       // No color correction defined
       return;
     }
-    if (output == null) {
-      // We'll do this when we reconnect
+    if (!connector.isConnected()) {
       return;
     }
 
@@ -210,8 +270,8 @@ public class OPC
     header[7] = 0x01;       // Command ID low byte
 
     try {
-      output.write(header);
-      output.write(content);
+      connector.output.write(header);
+      connector.output.write(content);
     } catch (Exception e) {
       dispose();
     }
@@ -229,14 +289,17 @@ public class OPC
       return;
     }
  
-    if (output == null) {
-      // Try to (re)connect
-      connect();
-    }
-    if (output == null) {
+    if (!connector.isConnected()) {
       return;
     }
-
+    
+    // handle first draw after connect
+    if (!this.wasConnected) {
+        sendColorCorrectionPacket();
+        sendFirmwareConfigPacket();
+        this.wasConnected = true;
+    }
+ 
     int numPixels = pixelLocations.length;
     int ledAddress = 4;
 
@@ -315,16 +378,13 @@ public class OPC
       // No pixel buffer
       return;
     }
-    if (output == null) {
-      // Try to (re)connect
-      connect();
+    
+    if (!connector.isConnected()) {
+        return;
     }
-    if (output == null) {
-      return;
-    }
-
+    
     try {
-      output.write(packetData);
+      connector.output.write(packetData);
     } catch (Exception e) {
       dispose();
     }
@@ -332,30 +392,9 @@ public class OPC
 
   void dispose()
   {
-    // Destroy the socket. Called internally when we've disconnected.
-    if (output != null) {
-      println("Disconnected from OPC server");
-    }
-    socket = null;
-    output = null;
+      println("Disconnected from " + this.host + ". Retrying...");
+      connector.dispose();
+      this.wasConnected = false; 
   }
 
-  void connect()
-  {
-    // Try to connect to the OPC server. This normally happens automatically in draw()
-    try {
-      socket = new Socket(host, port);
-      socket.setTcpNoDelay(true);
-      output = socket.getOutputStream();
-      println("Connected to OPC server");
-    } catch (ConnectException e) {
-      dispose();
-    } catch (IOException e) {
-      dispose();
-    }
-    
-    sendColorCorrectionPacket();
-    sendFirmwareConfigPacket();
-  }
 }
-

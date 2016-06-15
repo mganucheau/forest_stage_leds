@@ -15,17 +15,30 @@ import java.io.InputStream;
 import java.io.OutputStream; 
 import java.io.IOException; 
 
-public class nightlights_flames extends PApplet {
+public class nightlights_plasma extends PApplet {
 
 OPC opcc,opcu,opcs,opct,opca;
-PImage im;
+int SCREENWIDTH  = 200;
+int SCREENHEIGHT = 300;
+ 
+int GRADIENTLEN = 1500;
+// use this factor to make things faster, esp. for high resolutions
+int SPEEDUP = 1;
+ 
+// swing/wave function parameters
+int SWINGLEN = GRADIENTLEN*3;
+int SWINGMAX = GRADIENTLEN / 2 - 1;
+ 
+// gradient & swing curve arrays
+private int[] colorGrad;
+private int[] swingCurve;
 
 public void setup()
 {
-  size(800, 200);
 
-  // Load a sample image
-  im = loadImage("flames.jpeg");
+    makeGradient(GRADIENTLEN);
+    makeSwingCurve(SWINGLEN, SWINGMAX);
+
 
   // Connect to the local instance of fcserver
   opcc = new OPC(this, "cloud.local", 7890);
@@ -43,6 +56,8 @@ public void setup()
     opcc.ledStrip(3000, 48, width/2, height/2+15, width / 70.0f, 0, false);
     opcc.ledStrip(4000, 32, width/2, height/2+30, width / 70.0f, 0, false);
     opcc.ledStrip(5000, 32, width/2, height/2+45, width / 70.0f, 0, false);
+    
+    opcc.startConnect();
   }
  
   if (opcu != null){
@@ -50,17 +65,23 @@ public void setup()
     opcu.ledStrip(0, 32, width/2, height/2-10, width / 70.0f, 0, false);
     opcu.ledStrip(1000, 64, width/2, height/2-25, width / 70.0f, 0, false);
     opcu.ledStrip(2000, 32, width/2, height/2-35, width / 70.0f, 0, false);
+    
+    opcu.startConnect();
   }
   
   if (opcs != null){
     println("Initializing Strawberry");
     opcs.ledStrip(0, 24, width/2, height/2-45, width / 70.0f, 0, false);
     opcs.ledStrip(1000, 16, width/2, height/2+20, width / 70.0f, 0, false);
+    
+    opcs.startConnect();
   }
   
   if (opct != null){
     println("Initializing Toast");
     opct.ledStrip(0, 32, width/2+10, height/2-5, width / 70.0f, 0, false);
+    
+    opct.startConnect();
   }
   
   if (opca != null){
@@ -68,24 +89,117 @@ public void setup()
     opca.ledStrip(0, 16, width/2, height/2+5, width / 70.0f, 0, false);
     opca.ledStrip(1000, 16, width/2, height/2-50, width / 70.0f, 0, false);
     opca.ledStrip(2000, 48, width/2, height/2-40, width / 70.0f, 0, false);
-    opca.ledStrip(3000, 16, width/2, height/2+50, width / 70.0f, 0, false);    
+    opca.ledStrip(3000, 16, width/2, height/2+50, width / 70.0f, 0, false);
+
+    opca.startConnect();    
   }
 }
 
-public void draw()
-{
-  // Scale the image so that it matches the width of the window
-  int imHeight = im.height * width / im.width;
-
-  // Scroll down slowly, and wrap around
-  float speed = 0.05f;
-  float y = (millis() * -speed) % imHeight;
-  
-  // Use two copies of the image, so it seems to repeat infinitely  
-  image(im, 0, y, width, imHeight);
-  image(im, 0, y + imHeight, width, imHeight);
+public void draw() {
+  loadPixels();
+    int i = 0;
+    int t = frameCount*SPEEDUP;
+    int swingT = swing(t); // swingT/-Y/-YT variables are used for a little tuning ...
+ 
+    for (int y = 0; y < SCREENHEIGHT; y++) {
+        int swingY  = swing(y);
+        int swingYT = swing(y + t);
+        for (int x = 0; x < SCREENWIDTH; x++) {
+            // this is where the magic happens: map x, y, t around
+            // the swing curves and lookup a color from the gradient
+            // the "formula" was found by a lot of experimentation
+            pixels[i++] = gradient(
+                    swing(swing(x + swingT) + swingYT) +
+                    swing(swing(x + t     ) + swingY ));
+        }
+    }
+    updatePixels();
 }
-
+ 
+// create a new random gradient when mouse is pressed
+public void mousePressed() {
+    if (mouseButton == LEFT)
+        makeGradient(GRADIENTLEN);
+    else if (mouseButton == RIGHT)
+        makeSwingCurve(SWINGLEN, SWINGMAX);
+}
+   
+// fill the given array with a nice swingin' curve
+// three cos waves are layered together for that
+// the wave "wraps" smoothly around, uh, if you know what i mean ;-)
+public void makeSwingCurve(int arrlen, int maxval) {
+    // default values will be used upon first call
+    int factor1=2;
+    int factor2=3;
+    int factor3=6;
+ 
+    if (swingCurve == null) {
+        swingCurve = new int[SWINGLEN];
+    } else {
+        factor1=(int) random(1, 7);
+        factor2=(int) random(1, 7);
+        factor3=(int) random(1, 7);
+    }
+ 
+    int halfmax = maxval/factor1;
+ 
+    for( int i=0; i<arrlen; i++ ) {
+        float ni = i*TWO_PI/arrlen; // ni goes [0..TWO_PI] -> one complete cos wave
+        swingCurve[i]=(int)(
+            cos( ni*factor1 ) *
+            cos( ni*factor2 ) *
+            cos( ni*factor3 ) *
+            halfmax + halfmax );
+    }
+}
+ 
+// create a smooth, colorful gradient by cosinus curves in the RGB channels
+private void makeGradient(int arrlen) {
+    // default values will be used upon first call
+    int rf = 4;
+    int gf = 2;
+    int bf = 1;
+    int rd = arrlen;
+    int gd = arrlen / gf;
+    int bd = arrlen / bf / 2;
+ 
+    if (colorGrad == null) {
+        // first call
+        colorGrad = new int[GRADIENTLEN];
+    } else {
+        // we are called again: random gradient
+        rf = (int) random(1, 5);
+        gf = (int) random(1, 5);
+        bf = (int) random(1, 5);
+        rd = (int) random(0, arrlen);
+        gd = (int) random(0, arrlen);
+        bd = (int) random(0, arrlen);
+        System.out.println("Gradient factors("+rf+","+gf+","+bf+"), displacement("+rd+","+gd+","+bd+")");
+    }
+ 
+    // fill gradient array
+    for (int i = 0; i < arrlen; i++) {
+        int r = cos256(arrlen / rf, i + rd);
+        int g = cos256(arrlen / gf, i + gd);
+        int b = cos256(arrlen / bf, i + bd);
+        colorGrad[i] = color(r, g, b);
+    }
+}
+ 
+// helper: get cosinus sample normalized to 0..255
+private int cos256(final int amplitude, final int x) {
+    return (int) (cos(x * TWO_PI / amplitude) * 127 + 127);
+}
+ 
+// helper: get a swing curve sample
+private int swing(final int i) {
+    return swingCurve[i % SWINGLEN];
+}
+ 
+// helper: get a gradient sample
+private int gradient(final int i) {
+    return colorGrad[i % GRADIENTLEN];
+}
 /*
  * Simple Open Pixel Control client for Processing,
  * designed to sample each LED's color from some point on the canvas.
@@ -97,10 +211,64 @@ public void draw()
 
 
 
+public class Connector implements Runnable {
+   public Socket socket;
+   public OutputStream output;
+   
+   Thread t;
+   String host;
+   int port;
+ 
+   public Connector(String host, int port) {
+       this.host = host;
+       this.port = port;
+   }
+ 
+   public boolean isConnected() {
+       return (this.output != null);
+   }
+   
+   public void startConnect() {       
+       this.t = new Thread(this);
+       this.t.start();
+       println("Starting connection to OPC server " + this.host);
+   }
+   
+   public void dispose() {
+       this.socket = null;
+       this.output = null;
+   }
+   
+   public void run() {
+       while (true) {
+           if (this.output == null) {
+                try {
+                  this.socket = new Socket(host, port);
+                  this.socket.setTcpNoDelay(true);
+                  this.socket.setSoTimeout(1000);
+                  this.output = socket.getOutputStream();
+                  println("Connected to OPC server " + this.host);
+                } catch (ConnectException e) {
+                  dispose();
+                } catch (IOException e) {
+                  dispose();
+                }
+           }
+           try {
+             Thread.sleep(2000);
+           } catch (InterruptedException e) {
+           }
+       }
+   }
+}
+
 public class OPC
 {
-  Socket socket;
-  OutputStream output;
+  //Socket socket;
+  //OutputStream output;
+  
+  Connector connector;
+  
   String host;
   int port;
 
@@ -109,13 +277,21 @@ public class OPC
   byte firmwareConfig;
   String colorCorrection;
   boolean enableShowLocations;
+  
+  boolean wasConnected;
 
   OPC(PApplet parent, String host, int port)
   {
     this.host = host;
     this.port = port;
+    this.connector = new Connector(host, port);
     this.enableShowLocations = true;
-    parent.registerDraw(this);
+    this.wasConnected = false;
+    parent.registerMethod("draw", this);
+  }
+
+  public void startConnect() {
+     this.connector.startConnect(); 
   }
 
   // Set the location of a single LED
@@ -250,8 +426,7 @@ public class OPC
   // Send a packet with the current firmware configuration settings
   public void sendFirmwareConfigPacket()
   {
-    if (output == null) {
-      // We'll do this when we reconnect
+    if (!connector.isConnected()) {
       return;
     }
  
@@ -267,7 +442,7 @@ public class OPC
     packet[8] = firmwareConfig;
 
     try {
-      output.write(packet);
+      connector.output.write(packet);
     } catch (Exception e) {
       dispose();
     }
@@ -280,8 +455,7 @@ public class OPC
       // No color correction defined
       return;
     }
-    if (output == null) {
-      // We'll do this when we reconnect
+    if (!connector.isConnected()) {
       return;
     }
 
@@ -298,8 +472,8 @@ public class OPC
     header[7] = 0x01;       // Command ID low byte
 
     try {
-      output.write(header);
-      output.write(content);
+      connector.output.write(header);
+      connector.output.write(content);
     } catch (Exception e) {
       dispose();
     }
@@ -317,14 +491,17 @@ public class OPC
       return;
     }
  
-    if (output == null) {
-      // Try to (re)connect
-      connect();
-    }
-    if (output == null) {
+    if (!connector.isConnected()) {
       return;
     }
-
+    
+    // handle first draw after connect
+    if (!this.wasConnected) {
+        sendColorCorrectionPacket();
+        sendFirmwareConfigPacket();
+        this.wasConnected = true;
+    }
+ 
     int numPixels = pixelLocations.length;
     int ledAddress = 4;
 
@@ -403,16 +580,13 @@ public class OPC
       // No pixel buffer
       return;
     }
-    if (output == null) {
-      // Try to (re)connect
-      connect();
+    
+    if (!connector.isConnected()) {
+        return;
     }
-    if (output == null) {
-      return;
-    }
-
+    
     try {
-      output.write(packetData);
+      connector.output.write(packetData);
     } catch (Exception e) {
       dispose();
     }
@@ -420,35 +594,16 @@ public class OPC
 
   public void dispose()
   {
-    // Destroy the socket. Called internally when we've disconnected.
-    if (output != null) {
-      println("Disconnected from OPC server");
-    }
-    socket = null;
-    output = null;
+      println("Disconnected from " + this.host + ". Retrying...");
+      connector.dispose();
+      this.wasConnected = false; 
   }
 
-  public void connect()
-  {
-    // Try to connect to the OPC server. This normally happens automatically in draw()
-    try {
-      socket = new Socket(host, port);
-      socket.setTcpNoDelay(true);
-      output = socket.getOutputStream();
-      println("Connected to OPC server");
-    } catch (ConnectException e) {
-      dispose();
-    } catch (IOException e) {
-      dispose();
-    }
-    
-    sendColorCorrectionPacket();
-    sendFirmwareConfigPacket();
-  }
 }
-
+  public void settings() { 
+size(200, 300); }
   static public void main(String[] passedArgs) {
-    String[] appletArgs = new String[] { "nightlights_flames" };
+    String[] appletArgs = new String[] { "nightlights_plasma" };
     if (passedArgs != null) {
       PApplet.main(concat(appletArgs, passedArgs));
     } else {
