@@ -1,7 +1,7 @@
 OPC opcc,opcu,opcs,opct,opca;
 int SCREENWIDTH  = 200;
-int SCREENHEIGHT = 300;
- 
+int SCREENHEIGHT = 200;
+
 int GRADIENTLEN = 1500;
 // use this factor to make things faster, esp. for high resolutions
 int SPEEDUP = 1;
@@ -16,7 +16,7 @@ private int[] swingCurve;
 
 void setup()
 {
-size(200, 300);
+size(200, 200);
     makeGradient(GRADIENTLEN);
     makeSwingCurve(SWINGLEN, SWINGMAX);
 
@@ -137,12 +137,12 @@ void makeSwingCurve(int arrlen, int maxval) {
 // create a smooth, colorful gradient by cosinus curves in the RGB channels
 private void makeGradient(int arrlen) {
     // default values will be used upon first call
-    int rf = 4;
-    int gf = 2;
+    int rf = 3;
+    int gf = 3;
     int bf = 1;
-    int rd = arrlen;
-    int gd = arrlen / gf;
-    int bd = arrlen / bf / 2;
+    int rd = 1229;
+    int gd = 969;
+    int bd = 782;
  
     if (colorGrad == null) {
         // first call

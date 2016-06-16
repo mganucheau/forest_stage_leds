@@ -60,8 +60,8 @@ size(200, 300);
   
   if (opct != null){
     println("Initializing Toast");
-    opct.ledStrip(0, 32, width/2, height/2-2, width / 70.0, 0, false);
-    opct.ledStrip(1000, 51, width/2, height/2-7, width / 70.0, 0, false);
+    opct.ledStrip(0, 32, width/2+10, height/2-5, width / 70.0, 0, false);
+    
     opct.startConnect();
   }
   
